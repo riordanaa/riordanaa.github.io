@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="critter.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -28,6 +29,11 @@
         <li><a href="#contact">Contact</a></li>
       </ul>
     </nav>
+    <div class="critter-lane">
+      <button id="critter" type="button" aria-label="Probe the model (click to inspect it)"></button>
+    </div>
+    <div id="critter-tag" aria-hidden="true">don't click me</div>
+    <div id="critter-pop" role="status" aria-live="polite" hidden></div>
   </header>
 
   <main id="main">
@@ -98,7 +104,7 @@
         </p>
         <ul class="pills">
           <li><a href="https://doi.org/10.1007/978-3-032-19582-1_11">Paper</a></li>
-          <li><a href="https://github.com/riordanaa/LIMA-BVNS-Balanced-Sum-Square-Clustering---LLM-Implemented-VNS-LS">Code</a></li>
+          <li><a href="https://github.com/riordanaa/llm-metaheuristic-replication">Code</a></li>
           <li><a href="assets/pdf/2025-optimization-days-llm-metaheuristic-poster.pdf">Poster</a></li>
         </ul>
       </article>
@@ -165,7 +171,7 @@
           <span class="authors"><b>A. Riordan</b>, D. Aloise, R. Mart&iacute;n-Santamar&iacute;a.</span>
           <span class="title">Large Language Models for Metaheuristic Implementation: A Case Study with Variable Neighborhood Search.</span>
           <span class="venue">ICVNS 2025, Springer LNCS 16256, pp. 150&ndash;165, 2026. An extended version is under review at the <i>Journal of Heuristics</i>.</span>
-          <span class="plinks"><a href="https://doi.org/10.1007/978-3-032-19582-1_11">DOI</a> <a href="https://github.com/riordanaa/LIMA-BVNS-Balanced-Sum-Square-Clustering---LLM-Implemented-VNS-LS">Code</a></span>
+          <span class="plinks"><a href="https://doi.org/10.1007/978-3-032-19582-1_11">DOI</a> <a href="https://github.com/riordanaa/llm-metaheuristic-replication">Code</a></span>
         </li>
         <li>
           <span class="authors">W. G. Mitchener, A. Camilleri, <b>A. Riordan</b>, L. Calbert.</span>
@@ -210,6 +216,8 @@
 
   <footer class="wrap footer">
     <p>&copy; 2026 Aidan Riordan &middot; Last updated October 2026</p>
+    <p class="fanart">The header critter is fan art of the Claude Code mascot. Not affiliated with Anthropic.</p>
   </footer>
+  <script src="critter.js" defer></script>
 </body>
 </html>
