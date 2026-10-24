@@ -1,13 +1,13 @@
-// The header critter: follows the cursor, can be "probed", hides, and fights back.
+// The header critter: follows the cursor, can be "probed", hides, and fights back (breaking the screen).
 (() => {
   const lane = document.querySelector(".critter-lane");
   const critter = document.getElementById("critter");
   const pop = document.getElementById("critter-pop");
-  const hint = document.getElementById("critter-hint");
-  if (!lane || !critter || !pop) return;
+  const tag = document.getElementById("critter-tag");
+  if (!lane || !critter || !pop || !tag) return;
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const PX = 3;              // screen pixels per art pixel
+  const PX = 3.5;            // screen pixels per art pixel
   const W = 16 * PX;         // sprite width
 
   // Pixel art on a 16 x 7 grid ------------------------------------------------
@@ -35,65 +35,155 @@
 
   // State ------------------------------------------------------------------------
   let x = 24, target = 24, facing = 1, last = performance.now();
-  let pokes = 0, mode = "idle", modeTimer = 0, popTimer = 0, idleWander = 0;
-  let mouseSeen = false;
+  let pokes = 0, mode = "idle", popTimer = 0, idleWander = 0, mouseSeen = false;
+  const timers = [];
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  const clearLater = () => { timers.forEach(clearTimeout); timers.length = 0; };
 
   const laneWidth = () => lane.clientWidth;
   const clampX = (v) => Math.max(4, Math.min(laneWidth() - W - 4, v));
+  const centerX = () => lane.getBoundingClientRect().left + x + W / 2;
+
+  function follow(el) {
+    const left = Math.max(8, Math.min(window.innerWidth - el.offsetWidth - 8, centerX() - el.offsetWidth / 2));
+    el.style.left = left + "px";
+    el.style.setProperty("--arrow", `${centerX() - left}px`);
+  }
 
   function say(html, ms = 3500) {
     pop.innerHTML = html;
     pop.hidden = false;
-    placePop();
+    follow(pop);
     clearTimeout(popTimer);
     if (ms) popTimer = setTimeout(() => (pop.hidden = true), ms);
-  }
-  function placePop() {
-    const left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8,
-      lane.getBoundingClientRect().left + x + W / 2 - pop.offsetWidth / 2));
-    pop.style.left = left + "px";
   }
 
   const bar = (label, v) =>
     `<div class="feat"><span>${label}</span><i style="--v:${v}"></i><b>${v.toFixed(2)}</b></div>`;
-
-  function readout(cur, shy, sword, caption) {
-    return `<p class="pop-title">${caption}</p>
+  const readout = (cur, shy, sword, caption) => `<p class="pop-title">${caption}</p>
       ${bar("curiosity", cur)}${bar("shyness", shy)}${bar("sword", sword)}
       <p class="pop-eq">mood &asymp; 0.91&middot;curiosity &minus; 0.35&middot;pokes&sup2;</p>
       <p class="pop-note">equation found by symbolic regression (R&sup2; = 0.97, n = ${pokes})</p>`;
-  }
 
-  function setMode(next, ms) {
+  function setMode(next) {
     mode = next;
     critter.dataset.mode = next;
-    clearTimeout(modeTimer);
-    if (ms) modeTimer = setTimeout(() => setMode("idle"), ms);
+    tag.hidden = next !== "idle";
+  }
+
+  // Breaking the screen --------------------------------------------------------
+  function breakScreen(cx, cy) {
+    const w = window.innerWidth, h = window.innerHeight;
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "cracks");
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+    const rays = [];
+    const n = 13 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < n; i++) {
+      let a = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+      const reach = 260 + Math.random() * Math.max(w, h) * 0.7;
+      const pts = [[cx, cy]];
+      let px = cx, py = cy, len = 0;
+      while (len < reach) {
+        const seg = 25 + Math.random() * 60;
+        a += (Math.random() - 0.5) * 0.45;
+        px += Math.cos(a) * seg; py += Math.sin(a) * seg; len += seg;
+        pts.push([px, py]);
+      }
+      rays.push(pts);
+    }
+    const line = (pts) => pts.map((p) => p.map((v) => v.toFixed(1)).join(",")).join(" ");
+    const draw = (pts) => {
+      for (const cls of ["crack-shadow", "crack-light"]) {
+        const pl = document.createElementNS(NS, "polyline");
+        pl.setAttribute("points", line(pts));
+        pl.setAttribute("class", cls);
+        svg.appendChild(pl);
+      }
+    };
+    rays.forEach(draw);
+    // Spider-web rings connecting neighbouring rays
+    for (const k of [1, 3, 5]) {
+      const ring = rays.map((r) => r[Math.min(k, r.length - 1)]);
+      ring.push(ring[0]);
+      draw(ring);
+    }
+    const burst = document.createElementNS(NS, "circle");
+    burst.setAttribute("cx", cx); burst.setAttribute("cy", cy); burst.setAttribute("r", 7);
+    burst.setAttribute("class", "crack-burst");
+    svg.appendChild(burst);
+    document.body.appendChild(svg);
+
+    // Falling shards
+    const shards = [];
+    if (!reduceMotion) {
+      for (let i = 0; i < 9; i++) {
+        const s = document.createElement("div");
+        s.className = "shard";
+        const size = 14 + Math.random() * 30;
+        s.style.cssText = `left:${cx + (Math.random() - 0.5) * 140}px; top:${cy + (Math.random() - 0.5) * 80}px;
+          width:${size}px; height:${size}px; --dx:${(Math.random() - 0.5) * 240}px; --rot:${(Math.random() - 0.5) * 720}deg;
+          animation-delay:${Math.random() * 0.25}s`;
+        document.body.appendChild(s);
+        shards.push(s);
+      }
+    }
+
+    // Knock the page sections crooked
+    const sections = [...document.querySelectorAll("main > section")];
+    if (!reduceMotion) {
+      sections.forEach((sec) => {
+        const r = (Math.random() - 0.5) * 3.2;
+        const dx = (Math.random() - 0.5) * 22;
+        const dy = Math.random() * 14;
+        sec.style.transition = "transform .35s cubic-bezier(.2,1.6,.4,1)";
+        sec.style.transform = `translate(${dx}px, ${dy}px) rotate(${r}deg)`;
+      });
+      document.body.classList.add("shake");
+      setTimeout(() => document.body.classList.remove("shake"), 450);
+    }
+
+    // Repair
+    later(() => {
+      svg.classList.add("fade");
+      sections.forEach((sec) => {
+        sec.style.transition = "transform .8s ease";
+        sec.style.transform = "";
+      });
+    }, 4200);
+    later(() => { svg.remove(); shards.forEach((s) => s.remove()); }, 5200);
   }
 
   // Interaction ------------------------------------------------------------------
   critter.addEventListener("click", () => {
-    if (hint) hint.remove();
+    if (mode === "attack") return;
+    clearLater();
     pokes += 1;
     if (pokes === 1) {
-      setMode("probe", 6000);
+      setMode("probe");
       say(readout(0.91, 0.24, 0.03, "Probing activations&hellip;"), 6000);
+      later(() => setMode("idle"), 6000);
     } else if (pokes === 2) {
-      const r = critter.getBoundingClientRect();
-      target = r.left - lane.getBoundingClientRect().left > laneWidth() / 2 ? 4 : laneWidth() - W - 4;
-      setMode("hide", 4500);
-      say(readout(0.40, 0.88, 0.21, "Hey. That's private."), 4500);
+      target = centerX() - lane.getBoundingClientRect().left > laneWidth() / 2 ? 4 : laneWidth() - W - 4;
+      setMode("hide");
+      say(readout(0.40, 0.88, 0.21, "Hey. I said don't."), 4500);
+      later(() => setMode("idle"), 4500);
     } else {
-      setMode("attack", 3600);
-      say(readout(0.12, 0.05, 0.99, "En garde!"), 3600);
-      if (!reduceMotion) document.body.classList.add("shake");
-      setTimeout(() => document.body.classList.remove("shake"), 450);
-      modeTimer = setTimeout(() => {
+      setMode("attack");
+      say(readout(0.12, 0.05, 0.99, "En garde!"), 1100);
+      later(() => {
+        const r = critter.querySelector(".sword").getBoundingClientRect();
+        breakScreen(r.left + r.width / 2, r.top + r.height * 0.2 + 30);
+      }, 900);
+      later(() => {
         setMode("idle");
         pokes = 0;
-        say(`<p class="pop-title">&hellip;fine.</p><p>Interpretability is harder when the model fights back.
+        tag.textContent = "seriously. don't click me";
+        say(`<p class="pop-title">&hellip;oops.</p><p>Interpretability is harder when the model fights back.
              <a href="#publications">Read the papers instead.</a></p>`, 5000);
-      }, 3600);
+      }, 5400);
     }
   });
 
@@ -104,12 +194,19 @@
     }
   });
 
-  // Blinking ---------------------------------------------------------------------
+  // Blinking and attention hops ---------------------------------------------------
   (function blink() {
     critter.classList.add("blink");
     setTimeout(() => critter.classList.remove("blink"), 140);
     setTimeout(blink, 2500 + Math.random() * 3500);
   })();
+  if (!reduceMotion) {
+    setInterval(() => {
+      if (mode !== "idle" || pokes > 0) return;
+      critter.classList.add("hop");
+      setTimeout(() => critter.classList.remove("hop"), 500);
+    }, 4000);
+  }
 
   // Animation loop ---------------------------------------------------------------
   function tick(now) {
@@ -124,7 +221,7 @@
       }
     }
     if (mode !== "probe") {
-      const speed = mode === "attack" ? 260 : mode === "hide" ? 220 : 90;
+      const speed = mode === "attack" ? 300 : mode === "hide" ? 220 : 90;
       const dx = clampX(target) - x;
       const step = reduceMotion ? dx : Math.sign(dx) * Math.min(Math.abs(dx), speed * dt);
       x += step;
@@ -135,8 +232,10 @@
     }
     critter.style.transform = `translateX(${x}px) scaleX(${facing})`;
     critter.classList.toggle("legs-alt", Math.floor(now / 140) % 2 === 1);
-    if (!pop.hidden) placePop();
+    if (!pop.hidden) follow(pop);
+    if (!tag.hidden) follow(tag);
     requestAnimationFrame(tick);
   }
+  setMode("idle");
   requestAnimationFrame(tick);
 })();
