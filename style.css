@@ -159,6 +159,12 @@ figcaption { font-size: .88rem; color: var(--muted); margin-top: .6rem; line-hei
 .timeline li:last-child { border-bottom: 0; }
 .yr { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9rem; padding-top: .1rem; }
 
+/* Outside research ------------------------------------------------------ */
+.outside-grid { display: grid; gap: 1.5rem; align-items: start; }
+@media (min-width: 40rem) { .outside-grid { grid-template-columns: 17rem 1fr; gap: 2rem; } }
+.outside figure { margin: 0; }
+.outside figure img { border-radius: 10px; }
+
 /* Footer ----------------------------------------------------------------- */
 .contact { margin-bottom: 3rem; }
 .footer { border-top: 1px solid var(--line); padding-top: 1.25rem; padding-bottom: 2.5rem; color: var(--muted); font-size: .85rem; }
