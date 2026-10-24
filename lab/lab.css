@@ -59,6 +59,14 @@ html { scroll-padding-top: 5rem; }
   border: 5px solid transparent; border-top: 0; border-bottom-color: var(--critter);
 }
 #critter-tag[hidden] { display: none; }
+#critter-tag.warn { background: #b4452a; animation: bob 1.6s ease-in-out infinite, nag 2.4s ease-in-out infinite; }
+#critter-tag.warn::before { border-bottom-color: #b4452a; }
+@keyframes nag { 0%, 85%, 100% { rotate: 0deg; } 89% { rotate: -6deg; } 93% { rotate: 6deg; } 97% { rotate: -3deg; } }
+.pop-next {
+  margin-top: .55rem !important; padding-top: .5rem; border-top: 1px dashed var(--line);
+  font-size: .8rem; color: var(--muted);
+}
+.pop-next b { color: var(--critter); font-weight: 600; }
 @keyframes bob { 50% { transform: translateY(3px); } }
 
 /* Popover under the header */

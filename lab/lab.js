@@ -65,10 +65,15 @@
       <p class="pop-eq">mood &asymp; 0.91&middot;curiosity &minus; 0.35&middot;pokes&sup2;</p>
       <p class="pop-note">equation found by symbolic regression (R&sup2; = 0.97, n = ${pokes})</p>`;
 
+  // The tag escalates with each poke so it's clear there's more to find.
+  const TAGS = ["don't click me", "don't do that again", "last warning."];
+  let fought = false;
+  const tagText = () => (fought && pokes === 0 ? "seriously. don't click me" : TAGS[Math.min(pokes, 2)]);
+  const nudge = (text) => `<p class="pop-next">${text} <b>Click again?</b></p>`;
+
   function setMode(next) {
     mode = next;
     critter.dataset.mode = next;
-    tag.hidden = next !== "idle";
   }
 
   // Breaking the screen --------------------------------------------------------
@@ -163,12 +168,12 @@
     pokes += 1;
     if (pokes === 1) {
       setMode("probe");
-      say(readout(0.91, 0.24, 0.03, "Probing activations&hellip;"), 6000);
-      later(() => setMode("idle"), 6000);
+      say(readout(0.91, 0.24, 0.03, "Probing activations&hellip;") + nudge("He didn't like that."), 4500);
+      later(() => setMode("idle"), 4500);
     } else if (pokes === 2) {
       target = centerX() - lane.getBoundingClientRect().left > laneWidth() / 2 ? 4 : laneWidth() - W - 4;
       setMode("hide");
-      say(readout(0.40, 0.88, 0.21, "Hey. I said don't."), 4500);
+      say(readout(0.40, 0.88, 0.21, "Hey. I said don't.") + nudge("Last warning."), 4500);
       later(() => setMode("idle"), 4500);
     } else {
       setMode("attack");
@@ -180,7 +185,7 @@
       later(() => {
         setMode("idle");
         pokes = 0;
-        tag.textContent = "seriously. don't click me";
+        fought = true;
         say(`<p class="pop-title">&hellip;oops.</p><p>Interpretability is harder when the model fights back.
              <a href="#publications">Read the papers instead.</a></p>`, 5000);
       }, 5400);
@@ -202,7 +207,7 @@
   })();
   if (!reduceMotion) {
     setInterval(() => {
-      if (mode !== "idle" || pokes > 0) return;
+      if (mode !== "idle") return;
       critter.classList.add("hop");
       setTimeout(() => critter.classList.remove("hop"), 500);
     }, 4000);
@@ -233,7 +238,14 @@
     critter.style.transform = `translateX(${x}px) scaleX(${facing})`;
     critter.classList.toggle("legs-alt", Math.floor(now / 140) % 2 === 1);
     if (!pop.hidden) follow(pop);
-    if (!tag.hidden) follow(tag);
+    // Tag shows whenever the popover isn't covering it (and he isn't mid-attack).
+    tag.hidden = mode === "attack" || !pop.hidden;
+    if (!tag.hidden) {
+      const t = tagText();
+      if (tag.textContent !== t) tag.textContent = t;
+      tag.classList.toggle("warn", pokes > 0);
+      follow(tag);
+    }
     requestAnimationFrame(tick);
   }
   setMode("idle");
